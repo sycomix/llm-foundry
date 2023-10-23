@@ -50,9 +50,10 @@ def get_hf_config_from_composer_state_dict(
         hf_config_dict['model_type'] = 'mpt'
 
     if 'attn_config' not in hf_config_dict:
-        attn_config = {}
-        attn_config['attn_type'] = 'multihead_attention'
-        attn_config['attn_pdrop'] = hf_config_dict['attn_pdrop']
+        attn_config = {
+            'attn_type': 'multihead_attention',
+            'attn_pdrop': hf_config_dict['attn_pdrop'],
+        }
         del hf_config_dict['attn_pdrop']
         attn_config['attn_impl'] = hf_config_dict['attn_impl']
         del hf_config_dict['attn_impl']
@@ -75,9 +76,8 @@ def get_hf_config_from_composer_state_dict(
         hf_config_dict['attn_config'] = attn_config
 
     if 'init_config' not in hf_config_dict:
-        init_config = {}
+        init_config = {'name': hf_config_dict['param_init_fn']}
 
-        init_config['name'] = hf_config_dict['param_init_fn']
         del hf_config_dict['param_init_fn']
         init_config['fan_mode'] = hf_config_dict['fan_mode']
         del hf_config_dict['fan_mode']

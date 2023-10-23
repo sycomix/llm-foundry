@@ -332,18 +332,18 @@ def _convert_bloom_causal_lm_to_prefix_lm(
     KeyValueT = Tuple[torch.Tensor, torch.Tensor]
 
     def forward(  # type: ignore
-        self: BloomModel,
-        input_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[Tuple[KeyValueT, ...]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        bidirectional_mask: Optional[torch.Tensor] = None,
-        head_mask: Optional[torch.LongTensor] = None,
-        inputs_embeds: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        **deprecated_arguments) -> Union[Tuple[
+            self: BloomModel,
+            input_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[Tuple[KeyValueT, ...]] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            bidirectional_mask: Optional[torch.Tensor] = None,
+            head_mask: Optional[torch.LongTensor] = None,
+            inputs_embeds: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            **deprecated_arguments) -> Union[Tuple[
             torch.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
         if deprecated_arguments.pop('position_ids', False) is not False:
             # `position_ids` could have been `torch.Tensor` or `None` so
@@ -354,7 +354,7 @@ def _convert_bloom_causal_lm_to_prefix_lm(
                 'You can safely ignore passing `position_ids`.',
                 FutureWarning,
             )
-        if len(deprecated_arguments) > 0:
+        if deprecated_arguments:
             raise ValueError(
                 f'Got unexpected arguments: {deprecated_arguments}')
 
@@ -513,21 +513,21 @@ def _convert_bloom_causal_lm_to_prefix_lm(
     KeyValueT = Tuple[torch.Tensor, torch.Tensor]
 
     def forward(
-        self: BloomForCausalLM,
-        input_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[Tuple[KeyValueT, ...]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        # WE'RE ADDING A NEW ARGUMENT! (Change 1/2)
-        bidirectional_mask: Optional[torch.Tensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        **deprecated_arguments
-    ) -> Union[Tuple[torch.Tensor], CausalLMOutputWithCrossAttentions]:
+            self: BloomForCausalLM,
+            input_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[Tuple[KeyValueT, ...]] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            # WE'RE ADDING A NEW ARGUMENT! (Change 1/2)
+            bidirectional_mask: Optional[torch.Tensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            **deprecated_arguments
+        ) -> Union[Tuple[torch.Tensor], CausalLMOutputWithCrossAttentions]:
         """Replacement forward method for BloomCausalLM."""
         if deprecated_arguments.pop('position_ids', False) is not False:
             # `position_ids` could have been `torch.Tensor` or `None` so
@@ -538,7 +538,7 @@ def _convert_bloom_causal_lm_to_prefix_lm(
                 'in v5.0.0. You can safely ignore passing `position_ids`.',
                 FutureWarning,
             )
-        if len(deprecated_arguments) > 0:
+        if deprecated_arguments:
             raise ValueError(
                 f'Got unexpected arguments: {deprecated_arguments}')
 
@@ -861,9 +861,10 @@ def convert_hf_causal_lm_to_prefix_lm(
 
     else:
         raise TypeError(
-            f'Cannot convert model to Prefix LM. ' +\
-            f'Model does not belong to set of supported HF models:' +\
-            f'\n{_SUPPORTED_HF_MODELS}'
+            (
+                f'Cannot convert model to Prefix LM. Model does not belong to set of supported HF models:'
+                + f'\n{_SUPPORTED_HF_MODELS}'
+            )
         )
 
 

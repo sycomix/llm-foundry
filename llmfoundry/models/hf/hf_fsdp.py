@@ -46,10 +46,9 @@ def rgetattr(obj: Any, attr: str, *args: List[Any]):
 
 
 def findattr(obj: Any, attrs: Iterable[str]):
-    for attr in attrs:
-        if rhasattr(obj, attr):
-            return rgetattr(obj, attr)
-    return None
+    return next(
+        (rgetattr(obj, attr) for attr in attrs if rhasattr(obj, attr)), None
+    )
 
 
 def hf_get_causal_base_model(model: PreTrainedModel):
@@ -96,9 +95,7 @@ def hf_get_init_device(init_device: str):
     """Returns the appropriate device to initialize models."""
     from composer.utils import dist
     if init_device == 'mixed':
-        if dist.get_local_rank() == 0:
-            return 'cpu'
-        return 'meta'
+        return 'cpu' if dist.get_local_rank() == 0 else 'meta'
     return init_device
 
 
@@ -144,9 +141,8 @@ def prepare_hf_causal_lm_model_for_fsdp(model: PreTrainedModel,
     for mod_name, module in modules.items():
         if module is None:
             raise ValueError(
-                f'Unable to FSDP-wrap this model! `{mod_name}` does not ' +
-                'follow common layer/weight naming conventions.')
-    block_type = type(model_block[0])  # type: ignore
+                f'Unable to FSDP-wrap this model! `{mod_name}` does not follow common layer/weight naming conventions.'
+            )
     if init_device == 'mixed':
         # For FSDP with models with different device intiailizations, `mixed`, which
         # initializes the model on rank 0 on `cpu` and on all other ranks on `meta,``
@@ -163,25 +159,22 @@ def prepare_hf_causal_lm_model_for_fsdp(model: PreTrainedModel,
             if isinstance(child, torch.nn.Module):
                 child._fsdp_wrap = True
 
-        if model.config.tie_word_embeddings and not model.config.model_type == 'mpt':
+        if (
+            model.config.tie_word_embeddings
+            and model.config.model_type != 'mpt'
+        ):
             raise ValueError(
                 'The passed in HuggingFaceModel has tied word embeddings '
                 'and the passed in initialization device is `mixed.` '
                 'In order to support this initialization scheme, we would need to break '
                 'the weight tying. As a result, either use a different initialization scheme '
                 'or in the model config set `tie_word_embeddings=False.`')
-    else:
-        # When using the HF LM models,
-        # the weights of the self.lm_head and self.transformer.wte are tied.
-        # This tying occurs inside the `self.post_init()` function.
-        # This is a hurdle for FSDP because they need to be in the same FSDP block
-        # These lines ensures that both modules stay together in the top-most block when
-        # the model has this tying enabled (almost all do; this property defaults to True)
-        if model.config.tie_word_embeddings:
-            causal_base_model._fsdp_wrap = False  # type: ignore
-            tied_embeddings._fsdp_wrap = False  # type: ignore
-            lm_head._fsdp_wrap = False  # type: ignore
+    elif model.config.tie_word_embeddings:
+        causal_base_model._fsdp_wrap = False  # type: ignore
+        tied_embeddings._fsdp_wrap = False  # type: ignore
+        lm_head._fsdp_wrap = False  # type: ignore
 
+    block_type = type(model_block[0])
     # FSDP Wrap and Activation Checkpoint every model block
     model.fsdp_wrap_fn = lambda module: isinstance(module, block_type)
     model.activation_checkpointing_fn = lambda module: isinstance(
@@ -218,9 +211,8 @@ def prepare_hf_enc_dec_model_for_fsdp(model: PreTrainedModel,
     for mod_name, module in modules.items():
         if module is None:
             raise ValueError(
-                f'Unable to FSDP-wrap this model! `{mod_name}` does not ' +
-                'follow common layer/weight naming conventions.')
-    decoder_block_type = type(decoder_block[0])  # type: ignore
+                f'Unable to FSDP-wrap this model! `{mod_name}` does not follow common layer/weight naming conventions.'
+            )
     encoder_block_type = type(encoder_block[0])  # type: ignore
 
     if model.config.tie_word_embeddings:
@@ -230,6 +222,7 @@ def prepare_hf_enc_dec_model_for_fsdp(model: PreTrainedModel,
         decoder._fsdp_wrap = False  # type: ignore
         lm_head._fsdp_wrap = False  # type: ignore
 
+    decoder_block_type = type(decoder_block[0])
     # FSDP Wrap and Activation Checkpoint every decoder block
     model.fsdp_wrap_fn = lambda module: isinstance(module, decoder_block_type)
     model.activation_checkpointing_fn = lambda module: isinstance(

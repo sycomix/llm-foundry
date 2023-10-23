@@ -15,24 +15,18 @@ class DeleteSpecificNodes(ast.NodeTransformer):
         self.nodes_to_remove = nodes_to_remove
 
     def visit(self, node: ast.AST):
-        if node in self.nodes_to_remove:
-            return None
-
-        return super().visit(node)
+        return None if node in self.nodes_to_remove else super().visit(node)
 
 
 def convert_to_relative_import(
         module_name: str, original_parent_module_name: Optional[str]) -> str:
     parts = module_name.split('.')
-    if parts[-1] == original_parent_module_name:
-        return '.'
-    return '.' + parts[-1]
+    return '.' if parts[-1] == original_parent_module_name else f'.{parts[-1]}'
 
 
 def find_module_file(module_name: str) -> str:
     module = importlib.import_module(module_name)
-    module_file = module.__file__
-    return module_file
+    return module.__file__
 
 
 def process_file(file_path: str, folder_path: str) -> List[str]:
@@ -94,7 +88,7 @@ def edit_files_for_hf_compatibility(folder: str):
     ]
     files_processed_and_queued = set(files_to_process)
 
-    while len(files_to_process) > 0:
+    while files_to_process:
         to_process = files_to_process.pop()
         if os.path.isfile(to_process) and to_process.endswith('.py'):
             to_add = process_file(to_process, folder)

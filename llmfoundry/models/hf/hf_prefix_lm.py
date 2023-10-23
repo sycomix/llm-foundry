@@ -84,8 +84,7 @@ class ComposerHFPrefixLM(HuggingFaceModelWithZLoss):
 
             attr = getattr(config, k)
             if isinstance(attr, Mapping):
-                extra_keys = [_k for _k in v.keys() if _k not in attr.keys()]
-                if extra_keys:
+                if extra_keys := [_k for _k in v.keys() if _k not in attr.keys()]:
                     raise ValueError(
                         f'Config dict override got unknown keys. '
                         f'Extra keys: {extra_keys}. '
@@ -137,15 +136,14 @@ class ComposerHFPrefixLM(HuggingFaceModelWithZLoss):
             MaskedAccuracy(ignore_index=_HF_IGNORE_INDEX)
         ]
 
-        composer_model = super().__init__(model=model,
-                                          shift_labels=True,
-                                          tokenizer=tokenizer,
-                                          metrics=metrics,
-                                          z_loss=om_model_config.get(
-                                              'z_loss', 0.0),
-                                          init_device=init_device)
-
-        return composer_model
+        return super().__init__(
+            model=model,
+            shift_labels=True,
+            tokenizer=tokenizer,
+            metrics=metrics,
+            z_loss=om_model_config.get('z_loss', 0.0),
+            init_device=init_device,
+        )
 
     def forward(self, batch):
         # Add bidirectional_mask if it is missing and can be constructed

@@ -69,7 +69,7 @@ class DecoupledAdaLRLion(Optimizer):
                  min_scale: float = 1e-4):
         if lr <= 0.:
             raise Exception(f'Invalid LR: {lr}. LR must be > 0')
-        if not all([0. <= beta <= 1. for beta in betas]):
+        if not all(0.0 <= beta <= 1.0 for beta in betas):
             raise Exception(
                 f'Invalid beta values: {betas} All betas must be between 0 and 1.'
             )
@@ -310,7 +310,7 @@ class DecoupledClipLion(Optimizer):
                  outlier_threshold=5.0):
         if lr <= 0.:
             raise Exception(f'Invalid LR: {lr}. LR must be > 0')
-        if not all([0. <= beta <= 1. for beta in betas]):
+        if not all(0.0 <= beta <= 1.0 for beta in betas):
             raise Exception(
                 f'Invalid beta values: {betas} All betas must be between 0 and 1.'
             )

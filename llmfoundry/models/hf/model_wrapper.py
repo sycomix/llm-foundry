@@ -53,7 +53,7 @@ class HuggingFaceModelWithZLoss(HuggingFaceModel):
                          metrics=metrics,
                          eval_metrics=eval_metrics,
                          shift_labels=shift_labels)
-        self.z_loss = float(z_loss)
+        self.z_loss = z_loss
         if self.z_loss < 0.0:
             raise ValueError(f'z_loss(={z_loss}) cannot be negative.')
 
@@ -69,17 +69,15 @@ class HuggingFaceModelWithZLoss(HuggingFaceModel):
             module)
 
     def forward(self, batch):
-        if isinstance(batch, dict) or isinstance(batch, UserDict):
-            # Further input validation is left to the huggingface forward call
-            batch = {
-                k: v for k, v in batch.items() if k in self.model_forward_args
-            }
-            output = self.model(**batch)  # type: ignore (thirdparty)
-        else:
+        if not isinstance(batch, (dict, UserDict)):
             raise ValueError(
                 'Unexpected batch type. Expected a dictionary with keys corresponding to the inputs to the forward function of the Huggingface model'
             )
-        return output
+        # Further input validation is left to the huggingface forward call
+        batch = {
+            k: v for k, v in batch.items() if k in self.model_forward_args
+        }
+        return self.model(**batch)
 
     def loss(self, outputs, batch):
         if self.config.use_return_dict:

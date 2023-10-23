@@ -31,13 +31,13 @@ def validate_config(cfg):
         if loader.name == 'text':
             if cfg.model.name in ['hf_prefix_lm', 'hf_t5']:
                 raise ValueError(
-                    f'Model type "{cfg.model.name}" is not supported when using the "text " ' +\
-                    f'dataloader. Please use the "text_denoising" dataloader to pre-train that model type.')
+                    f'Model type "{cfg.model.name}" is not supported when using the "text " dataloader. Please use the "text_denoising" dataloader to pre-train that model type.'
+                )
         elif loader.name == 'text_denoising':
             if cfg.model.name == 'hf_causal_lm':
                 raise ValueError(
-                    f'Model type "{cfg.model.name}" is not supported when using the "text_denoising" ' +\
-                    f'dataloader. Please use the "text" dataloader to pre-train that model type.')
+                    f'Model type "{cfg.model.name}" is not supported when using the "text_denoising" dataloader. Please use the "text" dataloader to pre-train that model type.'
+                )
             if loader.mixture_of_denoisers.decoder_only_format and cfg.model.name == 'hf_t5':
                 warnings.warn(
                     'Model type "hf_t5" requires `decoder_only_format` to be ``False``. ' +\
@@ -99,8 +99,7 @@ def main(cfg):
     warnings.filterwarnings(
         action='ignore',
         category=UserWarning,
-        message=
-        f'torch.distributed.*_base is a private function and will be deprecated.*'
+        message='torch.distributed.*_base is a private function and will be deprecated.*',
     )
 
     cfg.dist_timeout = cfg.get('dist_timeout', 600.0)

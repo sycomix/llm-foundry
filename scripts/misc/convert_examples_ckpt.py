@@ -32,7 +32,7 @@ def convert_examples_ckpt_state_dict(
 ) -> Dict[str, Any]:
     # map old keys to new keys
     key_mappings = OrderedDict()
-    for k in state_dict.keys():
+    for k in state_dict:
         key_mappings[k] = k
     for k, v in key_mappings.items():
         _v = v
@@ -157,7 +157,7 @@ def convert_examples_ckpt(
 
     # Convert optimizer state dict
     if 'optimizers' in composer_state_dict['state'].keys():
-        print(f'Updating optimizer state dict')
+        print('Updating optimizer state dict')
         for opt in composer_state_dict['state']['optimizers'].keys():
 
             opt_state = convert_examples_ckpt_state_dict(

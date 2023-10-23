@@ -19,9 +19,9 @@ class BinPackWrapper:
                  padding_side: Literal['left', 'right'],
                  max_leftover_bins_to_keep: Optional[int] = None):
         self.base_collator = collator
-        self.out_size = int(target_batch_size)
-        self.max_seq_len = int(max_seq_len)
-        self.pad_token_id = int(pad_token_id)
+        self.out_size = target_batch_size
+        self.max_seq_len = max_seq_len
+        self.pad_token_id = pad_token_id
         self.padding_side = padding_side
 
         if self.out_size <= 0:
@@ -116,7 +116,7 @@ def combine_in_place(example: Dict[str, torch.Tensor],
         # predict the first token in add_on, which would make no sense.
         add_on['labels'][0] = -100
 
-    for k in example.keys():
+    for k in example:
         if k == 'sequence_id':
             example[k] = torch.cat(
                 [example[k], add_on[k] + 1 + torch.max(example[k])])
@@ -134,11 +134,9 @@ def first_fit_bin_packing(
     # Will contain tuples (bin_size_size, packed_example)
     bins: List[Tuple[int, Dict[str, torch.Tensor]]] = existing_bins
 
-    starting_total_bin_sizes = sum([bin_size for bin_size, _ in bins])
+    starting_total_bin_sizes = sum(bin_size for bin_size, _ in bins)
 
-    sizes_and_examples = [
-        (size, example) for size, example in zip(sizes, examples)
-    ]
+    sizes_and_examples = list(zip(sizes, examples))
     sorted_sizes_and_examples = sorted(sizes_and_examples,
                                        key=lambda x: x[0],
                                        reverse=True)
@@ -146,11 +144,8 @@ def first_fit_bin_packing(
     required_num_examples = max(0, num_bins - len(bins))
     num_examples = len(sizes)
     if num_examples < required_num_examples:
-        for size, example in sorted_sizes_and_examples:
-            # Can't keep packing. All remaining items get their own bin.
-            bins.append((size, example))
-
-        total_bin_sizes = sum([bin_size for bin_size, _ in bins])
+        bins.extend((size, example) for size, example in sorted_sizes_and_examples)
+        total_bin_sizes = sum(bin_size for bin_size, _ in bins)
         total_new_bin_sizes = total_bin_sizes - starting_total_bin_sizes
         total_example_sizes = sum(sizes)
         if total_new_bin_sizes != total_example_sizes:
@@ -198,7 +193,7 @@ def first_fit_bin_packing(
         if not added:
             bins.append((size, example))
 
-    total_bin_sizes = sum([bin_size for bin_size, _ in bins])
+    total_bin_sizes = sum(bin_size for bin_size, _ in bins)
     total_new_bin_sizes = total_bin_sizes - starting_total_bin_sizes
     total_example_sizes = sum(sizes)
     if total_new_bin_sizes != total_example_sizes:

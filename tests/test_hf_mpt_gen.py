@@ -23,8 +23,7 @@ def test_init_hfhub_mpt(device, attn_impl):
 
     reproducibility.seed_all(test_cfg.get('seed', 42))
 
-    attn_uses_sequence_id = True if test_cfg.get('eos_token_id',
-                                                 None) is not None else False
+    attn_uses_sequence_id = test_cfg.get('eos_token_id', None) is not None
     test_cfg.model = {
         'name': 'hf_causal_lm',
         'pretrained_model_name_or_path': 'mosaicml/mpt-7b',

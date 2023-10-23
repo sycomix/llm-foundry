@@ -71,11 +71,7 @@ class MPTModel(MPTPreTrainedModel):
         self.alibi_bias_max = config.attn_config['alibi_bias_max']
 
         if config.init_device == 'mixed':
-            if dist.get_local_rank() == 0:
-                config.init_device = 'cpu'
-            else:
-                config.init_device = 'meta'
-
+            config.init_device = 'cpu' if dist.get_local_rank() == 0 else 'meta'
         if config.norm_type.lower() not in NORM_CLASS_REGISTRY.keys():
             norm_options = ' | '.join(NORM_CLASS_REGISTRY.keys())
             raise NotImplementedError(
@@ -320,13 +316,13 @@ class MPTModel(MPTPreTrainedModel):
             if self.attn_uses_sequence_id and sequence_id is None:
                 raise ValueError(
                     'sequence_id is a required argument when MPT is configured with attn_uses_sequence_id=True ' +\
-                    'and the model is in train mode.'
+                        'and the model is in train mode.'
                 )
             elif (self.attn_uses_sequence_id is False) and (sequence_id
                                                             is not None):
                 warnings.warn(
                     'MPT received non-None input for `sequence_id` but is configured with attn_uses_sequence_id=False. ' +\
-                    'This input will be ignored. If you want the model to use `sequence_id`, set attn_uses_sequence_id to True.'
+                        'This input will be ignored. If you want the model to use `sequence_id`, set attn_uses_sequence_id to True.'
                 )
 
         S = input_ids.size(1)
@@ -343,8 +339,7 @@ class MPTModel(MPTPreTrainedModel):
             if past_key_values is not None:
                 if len(past_key_values) != self.config.n_layers:
                     raise ValueError(
-                        f'past_key_values must provide a past_key_value for each attention ' +\
-                        f'layer in the network ({len(past_key_values)=}; {self.config.n_layers=}).'
+                        f'past_key_values must provide a past_key_value for each attention layer in the network ({len(past_key_values):=}; {self.config.n_layers:=}).'
                     )
                 # For attn_impl: triton and flash the past key tensor spec is (batch, seq, dim).
                 # For attn_impl: torch the past key tensor spec is (batch, heads, head_dim, seq).
@@ -621,14 +616,12 @@ class MPTForCausalLM(MPTPreTrainedModel):
         See https://github.com/huggingface/transformers/blob/3ec7a47664ebe40c40f4b722f6bb1cd30c3821ec/src/transformers/models/gpt2/modeling_gpt2.py#L1122-L1133
         for an example in transformers.
         """
-        reordered_past = []
-        for layer_past in past_key_values:
-            reordered_past += [
-                tuple(
-                    past_state.index_select(0, beam_idx)
-                    for past_state in layer_past)
-            ]
-        return reordered_past
+        return [
+            tuple(
+                past_state.index_select(0, beam_idx) for past_state in layer_past
+            )
+            for layer_past in past_key_values
+        ]
 
 
 class ComposerMPTCausalLM(HuggingFaceModel):
@@ -712,7 +705,7 @@ class ComposerMPTCausalLM(HuggingFaceModel):
         # that the dataset has been constructed without padding. Additionally, we
         # assume the backward pass is approximately 2x the forward pass
 
-        bs, msl = batch['input_ids'].shape[0:2]
+        bs, msl = batch['input_ids'].shape[:2]
         params_flops_per_token = 2 * self.n_active_params
         params_flops_per_seq = params_flops_per_token * msl
         attn_flops_per_seq = self.model.config.n_layers * 2 * 2 * (

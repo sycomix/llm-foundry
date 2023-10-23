@@ -63,15 +63,15 @@ class Seq2SeqFinetuningCollator:
             'input_ids', 'labels', 'attention_mask', 'decoder_input_ids',
             'decoder_attention_mask', 'generate_output'
         ]
-        found_keys = []
-        for illegal_key in illegal_keys:
-            if illegal_key in self.batch_metadata:
-                found_keys.append(illegal_key)
-        if found_keys:
+        if found_keys := [
+            illegal_key
+            for illegal_key in illegal_keys
+            if illegal_key in self.batch_metadata
+        ]:
             raise ValueError(
                 f'The following keys are in batch_metadata but are not allowed: {", ".join(found_keys)}.\n' +\
-                f'You cannot use keys that are used directly by the models. The prohibited keys are:\n' +\
-                f'{", ".join(illegal_keys)}'
+                    f'You cannot use keys that are used directly by the models. The prohibited keys are:\n' +\
+                    f'{", ".join(illegal_keys)}'
             )
         if self.format_for_generation:
             self.batch_metadata['generate_output'] = True
@@ -93,7 +93,7 @@ class Seq2SeqFinetuningCollator:
                 if self.tokenizer.sep_token_id is None:
                     raise ValueError(
                         'Setting separator_text=True requires that the tokenizer has sep_token_id but it has not been set. ' +\
-                        'Please pass a string argument for separator_text or set sep_token_id in the tokenizer.'
+                            'Please pass a string argument for separator_text or set sep_token_id in the tokenizer.'
                     )
                 self.separator_tokens = [self.tokenizer.sep_token_id]
             else:
@@ -138,10 +138,10 @@ class Seq2SeqFinetuningCollator:
             target = [t for t in target if t != self.tokenizer.pad_token_id]
             # Second, append any separator tokens to the context tokens
             if self.separator_tokens:
-                context = context + self.separator_tokens
+                context += self.separator_tokens
             # Third, ensure that the target text ends with an eos tag
             if target[-1] != self.tokenizer.eos_token_id:
-                target = target + [self.tokenizer.eos_token_id]
+                target += [self.tokenizer.eos_token_id]
 
             n_context = len(context)
             n_target = len(target)
@@ -149,10 +149,14 @@ class Seq2SeqFinetuningCollator:
             if n_context >= self.max_seq_len:
                 if not self._warned_context:
                     warnings.warn(
-                        f'Skipping example because CONTEXT length={n_context} leaves no room ' +\
-                        f'for TARGET tokens because max_seq_len={self.max_seq_len}. ' +\
-                        f'If this causes downstream issues because of inconsistent batch sizes, ' +\
-                        f'consider increasing max_seq_len or using example packing.'
+                        (
+                            (
+                                f'Skipping example because CONTEXT length={n_context} leaves no room '
+                                + f'for TARGET tokens because max_seq_len={self.max_seq_len}. '
+                                + 'If this causes downstream issues because of inconsistent batch sizes, '
+                            )
+                            + 'consider increasing max_seq_len or using example packing.'
+                        )
                     )
                     self._warned_context = True
                 continue
@@ -182,13 +186,16 @@ class Seq2SeqFinetuningCollator:
                 # full input sequence, cutting off any excess tokens from the
                 # end of the target
                 if n_context + n_target > self.max_seq_len:
-                    old_n_target = int(n_target)
+                    old_n_target = n_target
                     n_target = self.max_seq_len - n_context
                     if not self._warned_target:
                         warnings.warn(
-                            f'Truncating TARGET sequence of length={old_n_target} to length={n_target}, ' +\
-                            f'so context+target fit max_seq_len={self.max_seq_len}. If truncation is ' +\
-                            f'a problem, consider increasing max_seq_len.')
+                            (
+                                f'Truncating TARGET sequence of length={old_n_target} to length={n_target}, '
+                                + f'so context+target fit max_seq_len={self.max_seq_len}. If truncation is '
+                                + 'a problem, consider increasing max_seq_len.'
+                            )
+                        )
                         self._warned_target = True
                     target = target[-n_target:]
                     target[-1] = self.tokenizer.eos_token_id
@@ -262,17 +269,20 @@ class Seq2SeqFinetuningCollator:
             target = [t for t in target if t != self.tokenizer.pad_token_id]
             # ... second, ensure that the target text ends with an eos tag
             if target[-1] != self.tokenizer.eos_token_id:
-                target = target + [self.tokenizer.eos_token_id]
+                target += [self.tokenizer.eos_token_id]
             # ... third, we need to pad labels ourselves. Because HF.
             if len(target) < self.max_seq_len:
                 i_pad = [_HF_IGNORE_INDEX] * (self.max_seq_len - len(target))
-                target = target + i_pad
+                target += i_pad
             else:
                 if not self._warned_target:
                     warnings.warn(
-                        f'Truncating TARGET sequence of length={len(target)} ' +\
-                        f'to max_seq_len={self.max_seq_len}. If truncation is ' +\
-                        f'a problem, consider increasing max_seq_len.')
+                        (
+                            f'Truncating TARGET sequence of length={len(target)} '
+                            + f'to max_seq_len={self.max_seq_len}. If truncation is '
+                            + 'a problem, consider increasing max_seq_len.'
+                        )
+                    )
                     self._warned_target = True
                 target = target[:self.max_seq_len -
                                 1] + [self.tokenizer.eos_token_id]
@@ -281,9 +291,12 @@ class Seq2SeqFinetuningCollator:
             if len(context) > self.max_seq_len:
                 if not self._warned_context:
                     warnings.warn(
-                        f'Truncating CONTEXT sequence of length={len(context)} ' +\
-                        f'to max_seq_len={self.max_seq_len}. If truncation is ' +\
-                        f'a problem, consider increasing max_seq_len.')
+                        (
+                            f'Truncating CONTEXT sequence of length={len(context)} '
+                            + f'to max_seq_len={self.max_seq_len}. If truncation is '
+                            + 'a problem, consider increasing max_seq_len.'
+                        )
+                    )
                     self._warned_context = True
                 context = context[:self.max_seq_len -
                                   1] + [self.tokenizer.eos_token_id]

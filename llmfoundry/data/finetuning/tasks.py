@@ -99,7 +99,7 @@ class StreamingFinetuningDataset(StreamingDataset):
                  batch_size: Optional[int] = None,
                  **kwargs: Any):
 
-        if len(kwargs) > 0:
+        if kwargs:
             raise ValueError(
                 f'StreamingTextDataset() got an unexpected keyword argument: {kwargs}'
             )
@@ -309,7 +309,7 @@ def muennighoff_tokenize_function(inp: Dict):
         transitions = (' ', '\n', '\t')
         if not (prompt.endswith(transitions) or
                 response.startswith(transitions)):
-            response = ' ' + response
+            response = f' {response}'
     except Exception as e:
         raise ValueError(
             f'Unable to process prompt/response from {inp=}') from e

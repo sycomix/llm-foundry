@@ -56,9 +56,9 @@ def parse_args() -> Namespace:
 
     parsed = parser.parse_args()
 
-    if os.path.isdir(parsed.out_root) and len(
-            set(os.listdir(parsed.out_root)).intersection(set(
-                parsed.splits))) > 0:
+    if os.path.isdir(parsed.out_root) and set(
+        os.listdir(parsed.out_root)
+    ).intersection(set(parsed.splits)):
         raise ValueError(
             f'--out_root={parsed.out_root} contains {os.listdir(parsed.out_root)} which cannot overlap with the requested splits {parsed.splits}.'
         )
@@ -215,31 +215,33 @@ def build_hf_dataset(
                                           split=split,
                                           streaming=True)
     if mode == ConcatMode.NO_CONCAT:
-        dataset = NoConcatDataset(hf_dataset)
-    else:
-        if not isinstance(tokenizer, PreTrainedTokenizerBase):
-            raise ValueError(
-                f'{tokenizer=} must be of type PreTrainedTokenizerBase')
-        if max_length is None:
-            raise ValueError(f'max_length must be set.')
-        if bos_text + eos_text == '':
-            test_tokens = tokenizer('test')
-            if test_tokens['input_ids'][
+        return NoConcatDataset(hf_dataset)
+    if not isinstance(tokenizer, PreTrainedTokenizerBase):
+        raise ValueError(
+            f'{tokenizer=} must be of type PreTrainedTokenizerBase')
+    if max_length is None:
+        raise ValueError('max_length must be set.')
+    if bos_text + eos_text == '':
+        test_tokens = tokenizer('test')
+        if test_tokens['input_ids'][
                     0] != tokenizer.bos_token_id and test_tokens['input_ids'][
                         -1] != tokenizer.eos_token_id:
-                tok_error_msg = 'This tokenizer does not insert an EOS nor BOS token. '
-                tok_error_msg += 'Concatenating with this tokenizer will result in sequences being '
-                tok_error_msg += 'attached without a separating token. Please use another tokenizer, '
-                tok_error_msg += 'such as facebook/opt-125m, or specify EOS/BOS text with e.g. '
-                tok_error_msg += '--bos_text=<|endoftext|>.'
-                raise ValueError(tok_error_msg)
-        dataset = ConcatTokensDataset(hf_dataset=hf_dataset,
-                                      tokenizer=tokenizer,
-                                      max_length=max_length,
-                                      bos_text=bos_text,
-                                      eos_text=eos_text,
-                                      no_wrap=no_wrap)
-    return dataset
+            tok_error_msg = (
+                'This tokenizer does not insert an EOS nor BOS token. '
+                + 'Concatenating with this tokenizer will result in sequences being '
+            )
+            tok_error_msg += 'attached without a separating token. Please use another tokenizer, '
+            tok_error_msg += 'such as facebook/opt-125m, or specify EOS/BOS text with e.g. '
+            tok_error_msg += '--bos_text=<|endoftext|>.'
+            raise ValueError(tok_error_msg)
+    return ConcatTokensDataset(
+        hf_dataset=hf_dataset,
+        tokenizer=tokenizer,
+        max_length=max_length,
+        bos_text=bos_text,
+        eos_text=eos_text,
+        no_wrap=no_wrap,
+    )
 
 
 def _est_progress_denominator(total_samples: int, chars_per_sample: int,
@@ -367,9 +369,9 @@ def main(args: Namespace) -> None:
         # Write samples
         print(f'Converting {folder_split} to MDS format...')
         print(
-            f'Note that the progress bar is based on the dataset length before tokenization.'
+            'Note that the progress bar is based on the dataset length before tokenization.'
         )
-        print(f'It will finish at a value below 100% if tokenizing')
+        print('It will finish at a value below 100% if tokenizing')
         with MDSWriter(columns=columns,
                        out=os.path.join(args.out_root, folder_split),
                        compression=args.compression) as out:

@@ -36,9 +36,7 @@ from typing import Dict
 
 def multiple_choice(inp: Dict[str, str]) -> Dict[str, str]:
     PROMPT_FORMAT = '{query}\nOptions:{options}\nAnswer: '
-    options = ''
-    for option in inp['choices']:
-        options += f'\n - {option}'
+    options = ''.join(f'\n - {option}' for option in inp['choices'])
     query = inp['query']
     return {
         'prompt': PROMPT_FORMAT.format(query=query, options=options),

@@ -13,14 +13,14 @@ from mcli.sdk import RunConfig, create_run, get_clusters
 
 def _get_cluster_info():
     clusters = get_clusters()
-    cluster_info = {}
-
-    for cluster in clusters:
-        cluster_info[cluster.name] = [(ci.gpu_type, max(ci.gpu_nums))
-                                      for ci in cluster.cluster_instances
-                                      if ci.gpu_type is not None]
-
-    return cluster_info
+    return {
+        cluster.name: [
+            (ci.gpu_type, max(ci.gpu_nums))
+            for ci in cluster.cluster_instances
+            if ci.gpu_type is not None
+        ]
+        for cluster in clusters
+    }
 
 
 CLUSTER_INFO = _get_cluster_info()
@@ -183,7 +183,7 @@ def get_global_train_batch_sizes(max_seq_len, pows, batch_sizes=[]):
 
 
 def get_parameters(yaml_file):
-    local_yamls = False if 'https' in yaml_file else True
+    local_yamls = 'https' not in yaml_file
     if local_yamls:
         # Load the YAML into a parameters dictionary
         with open(yaml_file) as f:

@@ -23,8 +23,8 @@ def get_dtype(dtype):
         return torch.bfloat16
     else:
         raise NotImplementedError(
-            f'dtype {dtype} is not supported. ' +\
-            f'We only support fp32, fp16, and bf16 currently')
+            f'dtype {dtype} is not supported. We only support fp32, fp16, and bf16 currently'
+        )
 
 
 def str2bool(v):
@@ -170,7 +170,7 @@ def main(args: Namespace) -> None:
         prompt_strings.append(prompt)
 
     # Grab config first
-    print(f'Loading HF Config...')
+    print('Loading HF Config...')
     from_pretrained_kwargs = {
         'use_auth_token': args.use_auth_token,
         'trust_remote_code': args.trust_remote_code,

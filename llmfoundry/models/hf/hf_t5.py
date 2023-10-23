@@ -73,8 +73,7 @@ class ComposerHFT5(HuggingFaceModelWithZLoss):
 
             attr = getattr(config, k)
             if isinstance(attr, Mapping):
-                extra_keys = [_k for _k in v.keys() if _k not in attr.keys()]
-                if extra_keys:
+                if extra_keys := [_k for _k in v.keys() if _k not in attr.keys()]:
                     raise ValueError(
                         f'Config dict override got unknown keys. '
                         f'Extra keys: {extra_keys}. '
@@ -84,8 +83,9 @@ class ComposerHFT5(HuggingFaceModelWithZLoss):
                 setattr(config, k, v)
 
         if not config.is_encoder_decoder:
-            raise ValueError(f'Model type "hf_t5" currently only supports T5 models ' +\
-                             f'using configs where `is_encoder_decoder` is ``True``.')
+            raise ValueError(
+                f'Model type "hf_t5" currently only supports T5 models using configs where `is_encoder_decoder` is ``True``.'
+            )
 
         # Set up the tokenizer (add tokens for denoising sentinels if needed)
         if om_model_config.get('adapt_vocab_for_denoising', False):
@@ -127,11 +127,10 @@ class ComposerHFT5(HuggingFaceModelWithZLoss):
             MaskedAccuracy(ignore_index=_HF_IGNORE_INDEX)
         ]
 
-        composer_model = super().__init__(model=model,
-                                          tokenizer=tokenizer,
-                                          metrics=metrics,
-                                          z_loss=om_model_config.get(
-                                              'z_loss', 0.0),
-                                          init_device=init_device)
-
-        return composer_model
+        return super().__init__(
+            model=model,
+            tokenizer=tokenizer,
+            metrics=metrics,
+            z_loss=om_model_config.get('z_loss', 0.0),
+            init_device=init_device,
+        )

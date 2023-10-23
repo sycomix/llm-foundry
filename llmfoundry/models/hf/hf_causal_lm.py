@@ -63,8 +63,7 @@ class ComposerHFCausalLM(HuggingFaceModelWithZLoss):
 
             attr = getattr(config, k)
             if isinstance(attr, Mapping):
-                extra_keys = [_k for _k in v.keys() if _k not in attr.keys()]
-                if extra_keys:
+                if extra_keys := [_k for _k in v.keys() if _k not in attr.keys()]:
                     raise ValueError(
                         f'Config dict override got unknown keys. '
                         f'Extra keys: {extra_keys}. '
@@ -138,13 +137,12 @@ class ComposerHFCausalLM(HuggingFaceModelWithZLoss):
         if dist.get_local_rank() == 0:
             os.remove(signal_file_path)
 
-        composer_model = super().__init__(model=model,
-                                          shift_labels=True,
-                                          tokenizer=tokenizer,
-                                          metrics=train_metrics,
-                                          eval_metrics=eval_metrics,
-                                          z_loss=om_model_config.get(
-                                              'z_loss', 0.0),
-                                          init_device=init_device)
-
-        return composer_model
+        return super().__init__(
+            model=model,
+            shift_labels=True,
+            tokenizer=tokenizer,
+            metrics=train_metrics,
+            eval_metrics=eval_metrics,
+            z_loss=om_model_config.get('z_loss', 0.0),
+            init_device=init_device,
+        )

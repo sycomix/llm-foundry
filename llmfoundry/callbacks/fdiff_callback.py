@@ -25,24 +25,24 @@ class FDiffMetrics(Callback):
         self.eval_prev_metric = {}
 
     def batch_end(self, state: State, logger: Logger):
-        if self.diff_train_metrics:
-            if not isinstance(state.loss, torch.Tensor):
-                raise NotImplementedError('Multiple losses not supported yet')
-            loss = state.loss.item()
-            if self.train_prev_loss:
-                logger.log_metrics(
-                    {'loss/train/total_fdiff': loss - self.train_prev_loss})
-            self.train_prev_loss = loss
+        if not self.diff_train_metrics:
+            return
+        if not isinstance(state.loss, torch.Tensor):
+            raise NotImplementedError('Multiple losses not supported yet')
+        loss = state.loss.item()
+        if self.train_prev_loss:
+            logger.log_metrics(
+                {'loss/train/total_fdiff': loss - self.train_prev_loss})
+        self.train_prev_loss = loss
 
-            for k in self.train_prev_metric.keys():
-                logger.log_metrics({
-                    f'metrics/train/{k}_fdiff':
-                        state.train_metric_values[k] - self.train_prev_metric[k]
-                })
+        for k in self.train_prev_metric.keys():
+            logger.log_metrics({
+                f'metrics/train/{k}_fdiff':
+                    state.train_metric_values[k] - self.train_prev_metric[k]
+            })
 
-            for k in state.train_metric_values.keys():
-                value = state.train_metric_values[k]
-                self.train_prev_metric[k] = value
+        for k in state.train_metric_values.keys():
+            self.train_prev_metric[k] = state.train_metric_values[k]
 
     def eval_end(self, state: State, logger: Logger):
         if self.diff_eval_metrics:

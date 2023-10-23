@@ -74,14 +74,14 @@ class Conversation:
                 f'Not all stop tokens were found in the tokenizer vocabulary: {stop_tokens}\n'
                 + 'Generation may stop or continue unexpectedly.')
 
+
+
         class StopOnTokens(StoppingCriteria):
 
             def __call__(self, input_ids: torch.LongTensor,
-                         scores: torch.FloatTensor, **kwargs) -> bool:
-                for stop_id in stop_token_ids:
-                    if input_ids[0][-1] == stop_id:
-                        return True
-                return False
+                                 scores: torch.FloatTensor, **kwargs) -> bool:
+                return any(input_ids[0][-1] == stop_id for stop_id in stop_token_ids)
+
 
         self.streamer = TextStreamer(tokenizer,
                                      skip_prompt=True,
@@ -285,7 +285,7 @@ def main(args: Namespace) -> None:
     print(f'Using {model_dtype=}')
 
     # Grab config first
-    print(f'Loading HF Config...')
+    print('Loading HF Config...')
     from_pretrained_kwargs = {
         'use_auth_token': args.use_auth_token,
         'trust_remote_code': args.trust_remote_code,

@@ -72,8 +72,7 @@ class MonolithicCheckpointSaver(Callback):
             enter_result=save_dir)
         with dir_context_mgr as temp_save_dir:
             save_path = str(Path(temp_save_dir) / Path(filename))
-            dirname = os.path.dirname(save_path)
-            if dirname:
+            if dirname := os.path.dirname(save_path):
                 os.makedirs(dirname, exist_ok=True)
             state_dict = {
                 'state': state.state_dict(),

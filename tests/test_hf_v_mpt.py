@@ -126,18 +126,20 @@ def test_compare_hf_v_mpt(attn_impl, dropout, alibi, mask_val, no_attn_mask):
         assert hf_n_params == n_params
 
     # generate random input branch
-    batch = {}
-    batch['input_ids'] = torch.randint(low=0,
-                                       high=model_cfg.vocab_size,
-                                       size=(batch_size,
-                                             model_cfg.max_seq_len)).to(device)
+    batch = {
+        'input_ids': torch.randint(
+            low=0,
+            high=model_cfg.vocab_size,
+            size=(batch_size, model_cfg.max_seq_len),
+        ).to(device)
+    }
     batch['labels'] = torch.randint(low=0,
                                     high=model_cfg.vocab_size,
                                     size=(batch_size,
                                           model_cfg.max_seq_len)).to(device)
     kpm = None
     if no_attn_mask:
-        if 'attention_mask' in batch.keys():
+        if 'attention_mask' in batch:
             _ = batch.pop('attention_mask')
     else:
         batch['attention_mask'] = torch.ones(size=(batch_size,
@@ -187,11 +189,7 @@ def test_compare_hf_v_mpt(attn_impl, dropout, alibi, mask_val, no_attn_mask):
     # convert hf gpt statedict to mosaic gpt statedict using the dict and list above
     _hf_model_statedict = {}
     for k, v in hf_model_statedict.items():
-        skip = False
-        for _k in hf_keys_ignore:
-            if _k in k:
-                skip = True
-                continue
+        skip = any(_k in k for _k in hf_keys_ignore)
         for _k in _transpose:
             if _k in k:
                 v = v.t()

@@ -161,10 +161,10 @@ class MixtureOfDenoisersCollator:
             self.span_mean_lengths_and_ratios = []
         elif isinstance(span_mean_lengths_and_ratios[0], (int, float)):
             # In this case, there is one span corruption task
-            if not len(span_mean_lengths_and_ratios) == 2:
+            if len(span_mean_lengths_and_ratios) != 2:
                 raise ValueError('`span_mean_lengths_and_ratios` must be a ' + \
-                                 'pair of [mean_length, mask_ratio], a list ' + \
-                                 f'of such pairs, or None. Got {span_mean_lengths_and_ratios}.')
+                                     'pair of [mean_length, mask_ratio], a list ' + \
+                                     f'of such pairs, or None. Got {span_mean_lengths_and_ratios}.')
             self.span_mean_lengths_and_ratios = [span_mean_lengths_and_ratios]
         else:
             # In this case, there are one or more span corruption tasks
@@ -172,8 +172,8 @@ class MixtureOfDenoisersCollator:
             for spec_pair in span_mean_lengths_and_ratios:
                 if len(spec_pair) != 2:
                     raise ValueError('`span_mean_lengths_and_ratios` must be a ' + \
-                                     'pair of [mean_length, mask_ratio], a list ' + \
-                                     f'of such pairs, or None. Got {span_mean_lengths_and_ratios}.')
+                                         'pair of [mean_length, mask_ratio], a list ' + \
+                                         f'of such pairs, or None. Got {span_mean_lengths_and_ratios}.')
             self.span_mean_lengths_and_ratios = span_mean_lengths_and_ratios
 
         # Process the sequence_mask_ratios argument
@@ -188,8 +188,8 @@ class MixtureOfDenoisersCollator:
             for ratio in sequence_mask_ratios:
                 if not (0 < ratio <= 1.0):
                     raise ValueError('`sequence_mask_ratios` must be a float (or list '+\
-                                    'of floats) that are each >0.0 and <=1.0, or None. '+\
-                                    f'Got {sequence_mask_ratios}.')
+                                        'of floats) that are each >0.0 and <=1.0, or None. '+\
+                                        f'Got {sequence_mask_ratios}.')
             self.sequence_mask_ratios = sequence_mask_ratios
 
         # Populate the noisers so we can learn to denoise them!
@@ -267,7 +267,7 @@ class MixtureOfDenoisersCollator:
         if not self._noisers:
             raise ValueError(
                 'No denoising tasks were included. Make sure to set ' + \
-                '`span_mean_lengths_and_ratios` and/or `sequence_mask_ratios`.')
+                    '`span_mean_lengths_and_ratios` and/or `sequence_mask_ratios`.')
 
     @property
     def smallest_max_raw_length(self):
@@ -439,20 +439,31 @@ def build_text_denoising_dataloader(
         context_eos=cfg.mixture_of_denoisers.get('context_eos'))
 
     truncate_to = cfg.mixture_of_denoisers.get('truncate_raw_tokens_to')
-    if truncate_to is None:
-        # By default, truncate to the largest max raw length of the denoisers
+    if (
+        truncate_to is not None
+        and isinstance(truncate_to, str)
+        and truncate_to.lower() == 'min'
+    ):
+        # Truncate to the smallest max raw length of the denoisers
+        truncate_to = collate_fn.smallest_max_raw_length
+    elif (
+        truncate_to is not None
+        and isinstance(truncate_to, str)
+        and truncate_to.lower() != 'min'
+        and truncate_to.lower() == 'max'
+        or truncate_to is None
+    ):
+        # Truncate to the largest max raw length of the denoisers
         truncate_to = collate_fn.largest_max_raw_length
-    elif isinstance(truncate_to, str):
-        if truncate_to.lower() == 'min':
-            # Truncate to the smallest max raw length of the denoisers
-            truncate_to = collate_fn.smallest_max_raw_length
-        elif truncate_to.lower() == 'max':
-            # Truncate to the largest max raw length of the denoisers
-            truncate_to = collate_fn.largest_max_raw_length
-        else:
-            raise ValueError(
-                f'truncate_raw_tokens_to(="{truncate_to.lower()}") must be "min", "max", a positive int, or None.'
-            )
+    elif (
+        truncate_to is not None
+        and isinstance(truncate_to, str)
+        and truncate_to.lower() != 'min'
+        and truncate_to.lower() != 'max'
+    ):
+        raise ValueError(
+            f'truncate_raw_tokens_to(="{truncate_to.lower()}") must be "min", "max", a positive int, or None.'
+        )
     else:
         if not isinstance(truncate_to, int):
             ValueError(
@@ -541,14 +552,11 @@ def noise_token_sequence(
     else:
         tokens = example['input_ids']
         length = sum(example['attention_mask'])
-    if length > max_raw_length:
-        length = max_raw_length
+    length = min(length, max_raw_length)
     if tokenizer.padding_side == 'left':
         tokens = tokens[-length:]
     else:
         tokens = tokens[:length]
-
-    prefix_tokens = prefix_tokens or []
 
     if length < 1:
         raise ValueError('Example cannot be empty but token length <1.')
@@ -589,8 +597,7 @@ def noise_token_sequence(
                                 sentinel_token_ids,
                                 ensure_eos=True)
 
-    # Tag the inputs with any prefix
-    if prefix_tokens:
+    if prefix_tokens := prefix_tokens or []:
         tokens_inputs = np.concatenate([prefix_tokens, tokens_inputs])
 
     # Trim if necessary
@@ -750,11 +757,11 @@ def _format_tokens_for_encoder_decoder(
     pad_token_id: int,
 ) -> Dict[str, torch.Tensor]:
     """Package the input/label sequence for an EncDec model."""
-    example = {}
-    # Re-populate with an empty, padded example
-    example['input_ids'] = torch.full((max_seq_length,),
-                                      pad_token_id,
-                                      dtype=torch.int32)
+    example = {
+        'input_ids': torch.full(
+            (max_seq_length,), pad_token_id, dtype=torch.int32
+        )
+    }
     example['labels'] = torch.full((max_seq_length,),
                                    _HF_IGNORE_INDEX,
                                    dtype=torch.int32)
@@ -782,11 +789,11 @@ def _format_tokens_for_decoder_only(
     padding_side: str,
 ) -> Dict[str, torch.Tensor]:
     """Package the input/label sequence for an decoder-only model."""
-    example = {}
-    # Re-populate with an empty, padded example
-    example['input_ids'] = torch.full((max_seq_length,),
-                                      pad_token_id,
-                                      dtype=torch.int32)
+    example = {
+        'input_ids': torch.full(
+            (max_seq_length,), pad_token_id, dtype=torch.int32
+        )
+    }
     example['labels'] = torch.full((max_seq_length,),
                                    _HF_IGNORE_INDEX,
                                    dtype=torch.int32)
@@ -831,10 +838,7 @@ if __name__ == '__main__':
     from llmfoundry.utils.builders import build_tokenizer
 
     local = sys.argv[1]
-    if len(sys.argv) > 2:
-        remote = sys.argv[2]
-    else:
-        remote = local
+    remote = sys.argv[2] if len(sys.argv) > 2 else local
     print(f'Reading val split from {remote} -> {local}')
 
     decoder_only = True
@@ -864,9 +868,8 @@ if __name__ == '__main__':
 
     tokenizer_cfg = {
         'name': 'EleutherAI/gpt-neox-20b' if decoder_only else 't5-base',
-        'kwargs': {}
+        'kwargs': {'model_max_length': cfg.dataset.max_seq_len},
     }
-    tokenizer_cfg['kwargs'] = {'model_max_length': cfg.dataset.max_seq_len}
     tokenizer_cfg = om.create(tokenizer_cfg)
     tokenizer = build_tokenizer(tokenizer_cfg)
 
@@ -895,8 +898,8 @@ if __name__ == '__main__':
         for k, v in batch.items():
             print(k, v.shape, v.dtype)
         for sample_ix, token_sample in enumerate(batch['input_ids']):
+            labels = batch['labels'][sample_ix]
             if cfg.mixture_of_denoisers.decoder_only_format:
-                labels = batch['labels'][sample_ix]
                 attn_inputs = batch['bidirectional_mask'][sample_ix].to(
                     torch.bool)
                 attn_full = batch['attention_mask'][sample_ix].to(torch.bool)
@@ -907,30 +910,38 @@ if __name__ == '__main__':
                             int(batch['sequence_id'][sample_ix].max()) + 1):
                         is_subseq = batch['sequence_id'][sample_ix] == subseq
                         print(
-                            '\033[93m{}\033[00m\n'.format('Input:  '),
-                            tokenizer.decode(token_sample[torch.logical_and(
-                                is_subseq, attn_inputs)]))
+                            f'\033[93mInput:  \033[00m\n',
+                            tokenizer.decode(
+                                token_sample[
+                                    torch.logical_and(is_subseq, attn_inputs)
+                                ]
+                            ),
+                        )
                         print(
-                            '\033[92m{}\033[00m\n'.format('Target: '),
-                            tokenizer.decode(labels[torch.logical_and(
-                                is_subseq, attn_labels)]))
+                            f'\033[92mTarget: \033[00m\n',
+                            tokenizer.decode(
+                                labels[
+                                    torch.logical_and(is_subseq, attn_labels)
+                                ]
+                            ),
+                        )
                 else:
-                    print('\033[91m{}\033[00m\n'.format('Full:   '),
-                          tokenizer.decode(token_sample[attn_full]))
-                    print('\033[93m{}\033[00m\n'.format('Input:  '),
-                          tokenizer.decode(token_sample[attn_inputs]))
-                    print('\033[92m{}\033[00m\n'.format('Target: '),
-                          tokenizer.decode(labels[attn_labels]))
+                    print(f'\033[91mFull:   \033[00m\n', tokenizer.decode(token_sample[attn_full]))
+                    print(
+                        f'\033[93mInput:  \033[00m\n',
+                        tokenizer.decode(token_sample[attn_inputs]),
+                    )
+                    print(f'\033[92mTarget: \033[00m\n', tokenizer.decode(labels[attn_labels]))
             else:
-                labels = batch['labels'][sample_ix]
                 attn_inputs = batch['attention_mask'][sample_ix].to(torch.bool)
                 attn_labels = batch['decoder_attention_mask'][sample_ix].to(
                     torch.bool)
                 print('-' * 20, f' Sample {sample_ix} ', '-' * 20)
-                print('\033[93m{}\033[00m\n'.format('Input:  '),
-                      tokenizer.decode(token_sample[attn_inputs]))
-                print('\033[92m{}\033[00m\n'.format('Target: '),
-                      tokenizer.decode(labels[attn_labels]))
+                print(
+                    f'\033[93mInput:  \033[00m\n',
+                    tokenizer.decode(token_sample[attn_inputs]),
+                )
+                print(f"\033[92m{'Target: '}\033[00m\n", tokenizer.decode(labels[attn_labels]))
         batch_ix += 1
 
     if packing:

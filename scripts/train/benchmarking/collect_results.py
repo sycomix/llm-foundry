@@ -116,9 +116,7 @@ def parse_run(run) -> Dict[str, Any]:
     activation_checkpointing = fsdp_config['activation_checkpointing']
 
     logs = msdk.get_run_logs(run)
-    lines = ''
-    for line in logs:
-        lines += line
+    lines = ''.join(logs)
     lines = lines.split('\n')
 
     for line in lines:
@@ -216,14 +214,14 @@ def main(args):
             print(e)
 
     if results:
-        csv_name = args.save_path + '.csv'
+        csv_name = f'{args.save_path}.csv'
         with open(csv_name, 'w') as f:
             writer = csv.DictWriter(f, fieldnames=results[0].keys())
             writer.writeheader()
             for result in results:
                 writer.writerow(result)
 
-        md_name = args.save_path + '.md'
+        md_name = f'{args.save_path}.md'
         fieldnames = results[0].keys()
         with open(md_name, 'w') as f:
             fmt = '| ' + ' {} |' * len(fieldnames) + '\n'

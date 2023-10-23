@@ -21,7 +21,7 @@ def load_icl_config(conf_path='tests/test_tasks.yaml'):
 
 @pytest.fixture(autouse=True, scope='function')
 def tmp_dir():
-    TMP_FOLDER = 'tmp_data' + str(random.randint(0, 100_000))
+    TMP_FOLDER = f'tmp_data{random.randint(0, 100000)}'
     dirpath = Path(TMP_FOLDER)
     if dirpath.exists() and dirpath.is_dir():
         shutil.rmtree(dirpath)
@@ -46,7 +46,7 @@ def run_test(dir, tokenizer, bos_tok=''):
         inputs = batch['input_ids'][0]
         if 'continuation_indices' in batch:
             continuation_indices = list(batch['continuation_indices'][0])
-            full_example = tokenizer.decode(inputs[0:continuation_indices[-1]])
+            full_example = tokenizer.decode(inputs[:continuation_indices[-1]])
             answer = tokenizer.decode(
                 inputs[continuation_indices[0]:continuation_indices[-1]])
         else:
@@ -58,7 +58,16 @@ def run_test(dir, tokenizer, bos_tok=''):
                     inputs == tokenizer.eos_token_id).tolist().index(False)
             full_example = tokenizer.decode(inputs[start_idx:])
             answer = batch['labels'][0][0]
-        if e.label == 'jeopardy/0-shot/american_history':
+        if e.label == 'copa/0-shot':
+            assert (
+                full_example
+                == f'{bos_tok}The man turned on the faucet, therefore the toilet filled with water'
+            )
+            assert answer == ' the toilet filled with water'
+        elif e.label == 'copa/1-shot':
+            assert full_example == bos_tok + 'The woman was in a bad mood, therefore she told her friend to leave her alone.\nThe man turned on the faucet, therefore the toilet filled with water'
+            assert answer == ' the toilet filled with water'
+        elif e.label == 'jeopardy/0-shot/american_history':
             assert full_example == bos_tok + 'AMERICAN HISTORY: On May 29, 1765 Patrick Henrys Stamp Act protest was interrupted with this one word\nAnswer: Treason'
             assert answer == ' Treason'
         elif e.label == 'jeopardy/1-shot/american_history':
@@ -70,14 +79,11 @@ def run_test(dir, tokenizer, bos_tok=''):
         elif e.label == 'triviaqa/1-shot':
             assert full_example == bos_tok + 'Question: High Willhays is the highest point of what National Park?\nAnswer: DARTMOOR\nQuestion: Who was the man behind The Chipmunks?\nAnswer:'
             assert answer == 'David Seville'
-        elif e.label == 'copa/0-shot':
-            assert full_example == bos_tok + 'The man turned on the faucet, therefore the toilet filled with water'
-            assert answer == ' the toilet filled with water'
-        elif e.label == 'copa/1-shot':
-            assert full_example == bos_tok + 'The woman was in a bad mood, therefore she told her friend to leave her alone.\nThe man turned on the faucet, therefore the toilet filled with water'
-            assert answer == ' the toilet filled with water'
         elif e.label == 'winograd/0-shot':
-            assert full_example == bos_tok + 'The city councilmen refused the demonstrators a permit because the city councilmen feared violence'
+            assert (
+                full_example
+                == f'{bos_tok}The city councilmen refused the demonstrators a permit because the city councilmen feared violence'
+            )
             assert answer == ' feared violence'
         elif e.label == 'winograd/1-shot':
             assert full_example == bos_tok + "Tom gave Ralph a lift to school so Ralph wouldn't have to walk.\nThe city councilmen refused the demonstrators a permit because the city councilmen feared violence"
